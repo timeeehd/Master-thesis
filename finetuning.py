@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPTNeoForCausalLM
 import numpy as np
 import random
@@ -11,9 +12,10 @@ import os
 
 
 class Stories(Dataset):
-    def __init__(self, df, control_code='', truncate=False, gpt2_type="gpt2-medium", max_length=2048):
+    def __init__(self, df, control_code='', truncate=False, gpt2_type="gpt2", max_length=2048):
 
         self.tokenizer = GPT2Tokenizer.from_pretrained(gpt2_type)
+        #         self.tokenizer = GPT2Tokenizer.from_pretrained(gpt2_type)
         self.stories = []
 
         for row in df:
@@ -30,58 +32,34 @@ class Stories(Dataset):
     def __getitem__(self, item):
         return self.stories[item]
 
-
-# class Stories2(Dataset):
-#     def __init__(self, df, control_code= '', truncate=False, gpt2_type="EleutherAI/gpt-neo-125M", max_length=1048):
-
-#         self.tokenizer = GPT2Tokenizer.from_pretrained(gpt2_type)
-#         self.stories = []
-
-#         for row in df:
-#           self.stories.append(torch.tensor(
-#                 self.tokenizer.encode(data[:max_length])
-#             ))
-#         if truncate:
-#             self.stories = self.stories[:20000]
-#         self.story_count = len(self.stories)
-
-#     def __len__(self):
-#         return self.story_count
-
-#     def __getitem__(self, item):
-#         return self.stories[item]
-
 with open('data/Fairy_tales_combined (1).txt', "r", encoding='utf-8-sig') as file:
     data = file.readlines()
-# import pandas as pd
 
-# data2 = pd.read_csv('../input/lm-finetuning/Fairy_tales_combined (1).txt', sep = '\n', header=None)
-# data2.head()
 
-dataset = Stories(data[:500], truncate=True, gpt2_type="gpt2")
-# dataset2 = Stories2(data, truncate=True, gpt2_type="EleutherAI/gpt-neo-125M")
-
-# print(dataset[2])
-# dataset2[2]
+dataset = Stories(data, truncate=True, gpt2_type="gpt2")
 
 
 #Get the tokenizer and model
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-model = GPT2LMHeadModel.from_pretrained("gpt2")
 
-# special_tokens_dict = {
-#         "bos_token": "<BOS>",
-#         "eos_token": "<EOS>",
-#         # "pad_token": "<PAD>",
-#         # "additional_special_tokens": [
-#         #     "<endprompt>",
-#         # ],
-#     }
-
-# num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+model = GPT2LMHeadModel.from_pretrained("gpt2").cuda()
 # model.resize_token_embeddings(len(tokenizer))
+# model.load_state_dict(torch.load('models/GPT2-med-2048-512.pt', map_location=torch.device('cpu')))
+# model.load_state_dict(torch.load('models/GPT2-small.pt'))
 
-#Accumulated batch size (since GPT2 is so big)
+
+special_tokens_dict = {
+        "bos_token": "<BOS>",
+        "eos_token": "<EOS>",
+        "pad_token": "<PAD>",
+        "additional_special_tokens": [
+            "<endprompt>",
+        ],
+    }
+
+num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+model.resize_token_embeddings(len(tokenizer))
+
 def pack_tensor(new_tensor, packed_tensor, max_seq_len):
     if packed_tensor is None:
         return new_tensor, True, None
@@ -91,16 +69,17 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         packed_tensor = torch.cat([new_tensor, packed_tensor[:, 1:]], dim=1)
         return packed_tensor, True, None
 
+
 def train(
-    dataset, model, tokenizer,
-    batch_size=16, epochs=1, lr=2e-5,
-    max_seq_len=2048, warmup_steps=50,
-    gpt2_type="gpt2", output_dir=".", output_prefix="wreckgar",
-    test_mode=False,save_model_on_epoch=False,
+        dataset, model, tokenizer,
+        batch_size=4, epochs=5, lr=2e-5,
+        max_seq_len=2048, warmup_steps=50,
+        gpt2_type="gpt2", output_dir=".", output_prefix="wreckgar",
+        test_mode=False, save_model_on_epoch=False,
 ):
     acc_steps = 100
-    device=torch.device("cpu")
-    # model = model.cuda()
+    device = torch.device("cuda")
+    model = model.cuda()
     model.train()
 
     optimizer = AdamW(model.parameters(), lr=lr)
@@ -109,7 +88,7 @@ def train(
     )
     torch.cuda.empty_cache()
     train_dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
-    loss=0
+    loss = 0
     accumulating_batch_count = 0
     input_tensor = None
     torch.cuda.empty_cache()
@@ -118,7 +97,7 @@ def train(
         print(f"Training epoch {epoch}")
         print(loss)
         for idx, entry in tqdm(enumerate(train_dataloader)):
-            (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 512)
+            (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 1024)
 
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
@@ -139,27 +118,11 @@ def train(
         if save_model_on_epoch:
             torch.save(
                 model.state_dict(),
-#                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
-                os.path.join(output_dir, f"{output_prefix}.pt"),
+                #                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
+                os.path.join('models', f"{output_prefix}.pt"),
             )
+            tokenizer.save_pretrained('models/tokenizer/gpt2/')
+
     return model
 
-model = train(dataset, model, tokenizer, save_model_on_epoch = True, output_prefix= 'test')
-
-generated = tokenizer.encode(
-    f" MY FATHER MEETS THE CAT  <newline>  <newline>  <newline>  One cold rainy day when my father was a little boy , he met an old  <newline>  alley cat on his street . ",
-    return_tensors="pt")
-sample_outputs = model.generate(generated, do_sample=False, top_k=50, max_length=1024, top_p=0.95,
-                                temperature=0, num_return_sequences=0, repetition_penalty=1.1)
-# sample_outputs = model.generate(generated, max_length=50)
-predicted_text = tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
-print(predicted_text)
-
-generated = tokenizer.encode(
-    f" <BOS> MY FATHER MEETS THE CAT  <newline>  <newline>  <newline>  One cold rainy day when my father was a little boy , he met an old  <newline>  alley cat on his street . <EOS>",
-    return_tensors="pt")
-sample_outputs = model.generate(generated, do_sample=False, top_k=50, max_length=1024, top_p=0.95,
-                                temperature=0, num_return_sequences=0, repetition_penalty=1.1)
-# sample_outputs = model.generate(generated, max_length=50)
-predicted_text2 = tokenizer.decode(sample_outputs[0], skip_special_tokens=False)
-print(predicted_text2)
+model = train(dataset, model, tokenizer, save_model_on_epoch = True, output_prefix= 'GPT2-small-2048-1024')
