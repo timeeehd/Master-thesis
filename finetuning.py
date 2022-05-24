@@ -9,6 +9,7 @@ from tqdm import tqdm, trange
 import torch.nn.functional as F
 import csv
 import os
+import sys
 
 
 class Stories(Dataset):
@@ -72,7 +73,7 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
 
 def train(
         dataset, model, tokenizer,
-        batch_size=4, epochs=5, lr=2e-5,
+        batch_size=4, epochs=100, lr=2e-5,
         max_seq_len=2048, warmup_steps=50,
         gpt2_type="gpt2", output_dir=".", output_prefix="wreckgar",
         test_mode=False, save_model_on_epoch=False,
@@ -94,9 +95,9 @@ def train(
     torch.cuda.empty_cache()
     for epoch in range(epochs):
         torch.cuda.empty_cache()
-        print(f"Training epoch {epoch}")
+        sys.stdout.write(f"Training epoch {epoch}")
         print(loss)
-        for idx, entry in tqdm(enumerate(train_dataloader)):
+        for idx, entry in (enumerate(train_dataloader)):
             (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 1024)
 
             if carry_on and idx != len(train_dataloader) - 1:
@@ -119,10 +120,11 @@ def train(
             torch.save(
                 model.state_dict(),
                 #                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
-                os.path.join('models', f"{output_prefix}.pt"),
+                os.path.join('/export/data2/tdebets/models', f"{output_prefix}.pt"),
             )
             tokenizer.save_pretrained('models/tokenizer/gpt2/')
 
     return model
-
+sys.stdout.write('start training')
 model = train(dataset, model, tokenizer, save_model_on_epoch = True, output_prefix= 'GPT2-small-2048-1024')
+sys.stdout.write('finished training')
