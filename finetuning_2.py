@@ -19,29 +19,29 @@ print('test2')
 # Download the pre-trained GPT-Neo model's tokenizer
 # Add the custom tokens denoting the beginning and the end 
 # of the sequence and a special token for padding
-# tokenizer = GPT2Tokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B",    
-#                             bos_token="<|startoftext|>",
-#                             eos_token="<|endoftext|>",
-#                             pad_token="<|pad|>")
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium",    
+                            bos_token="<BOS>",
+                            eos_token="<EOS>",
+                            pad_token="<PAD>")
 #Get the tokenizer and model
-tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+# tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium")
 print('initilize model')
 # model.resize_token_embeddings(len(tokenizer))
 # model.load_state_dict(torch.load('models/GPT2-med-2048-512.pt', map_location=torch.device('cpu')))
 # model.load_state_dict(torch.load('models/GPT2-small.pt'))
 
 print('add special tokens')
-special_tokens_dict = {
-        "bos_token": "<BOS>",
-        "eos_token": "<EOS>",
-        "pad_token": "<PAD>",
-        "additional_special_tokens": [
-            "<endprompt>",
-        ],
-    }
-num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+# special_tokens_dict = {
+#         "bos_token": "<BOS>",
+#         "eos_token": "<EOS>",
+#         "pad_token": "<PAD>",
+#         "additional_special_tokens": [
+#             "<fairy>",
+#         ],
+#     }
+# num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
 print('initialize model')
-model = GPT2LMHeadModel.from_pretrained("gpt2")
+model = GPT2LMHeadModel.from_pretrained("gpt2-medium")
 print('resize model')
 
 model.resize_token_embeddings(len(tokenizer))
@@ -52,7 +52,7 @@ model.resize_token_embeddings(len(tokenizer))
 # Resize the token embeddings because we've just added 3 new tokens 
 
 
-with open('data/Fairy_tales_combined (1).txt', "r", encoding='utf-8-sig') as file:
+with open('data/test_finetune.txt', "r", encoding='utf-8-sig') as file:
     data = file.readlines()
 print(len(data))
 class NetflixDataset(Dataset):
@@ -84,7 +84,7 @@ train_dataset, val_dataset = random_split(dataset,
                             [train_size, len(dataset) - train_size])
 
 training_args = TrainingArguments(output_dir="/export/data2/tdebets/models/test",
-                                  num_train_epochs=1,
+                                  num_train_epochs=50,
                                   logging_steps=1000,
                                   save_steps=1000,                                   
                                   per_device_train_batch_size=2,
@@ -106,7 +106,7 @@ trainer = Trainer(model=model, args=training_args,
 print('start training')
 trainer.train()
 
-tokenizer.save_pretrained('/export/data2/tdebets/tokenizer/gpt-neo_med')
+tokenizer.save_pretrained('/export/data2/tdebets/tokenizer/test')
 
 generated = tokenizer.encode(
     f" <BOS> MY FATHER MEETS THE CAT  <newline>  <newline>  <newline>  One cold rainy day when my father was a little boy , he met an old  <newline>  alley cat on his street . <endprompt> <EOS>",
