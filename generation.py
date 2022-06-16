@@ -17,12 +17,12 @@ transformers.logging.set_verbosity_error()
 
 path = '/export/data2/tdebets/models/'
 tokenizer_path = '/export/data2/tdebets/tokenizer/'
-maps = ['gpt-neo/', 'gpt-small/']
+maps = ['gpt-small/']
 # maps = ['gpt-neo/']
 
 # maps = ['test_fairy/']
 
-numbers = [0,5, 22, 50, 75, 100, 125, 150]
+numbers = [1,2,3,4]
 # numbers = [125, 150]
 with open('data/Fairy_prompts_test_tokenized.txt', "r", encoding='utf-8-sig') as file:
     data = file.readlines()

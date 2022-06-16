@@ -22,33 +22,35 @@ print('test2')
 # tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium",    
 #                             bos_token="<BOS>",
 #                             eos_token="<EOS>",
-#                             pad_token="<PAD>")
+#     
+# 
+#                         pad_token="<PAD>")
 #Get the tokenizer and model
 print('load tokenizer')
-tokenizer = GPT2Tokenizer.from_pretrained("/export/data2/tdebets/tokenizer/gpt-small/")
+tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 # model.resize_token_embeddings(len(tokenizer))
 # model.load_state_dict(torch.load('models/GPT2-med-2048-512.pt', map_location=torch.device('cpu')))
 # model.load_state_dict(torch.load('models/GPT2-small.pt'))
 
 # print('add special tokens')
-# special_tokens_dict = {
-#         "bos_token": "<BOS>",
-#         "eos_token": "<EOS>",
-#         "pad_token": "<PAD>",
-#         "additional_special_tokens": [
-#             "<fairy>",
-#         ],
-#     }
-# num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+special_tokens_dict = {
+        "bos_token": "<BOS>",
+        "eos_token": "<EOS>",
+        "pad_token": "<PAD>",
+        "additional_special_tokens": [
+            "<fairy>",
+        ],
+    }
+num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
 print('initialize model')
-model = GPT2LMHeadModel.from_pretrained("/export/data2/tdebets/models/gpt-small/100epochs").cuda()
+model = GPT2LMHeadModel.from_pretrained("gpt2").cuda()
 
 # model.resize_token_embeddings(len(tokenizer))
 # num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
 # Download the pre-trained GPT-Neo model and transfer it to the GPU
 # print('initilize model')
 
-# model = GPTNeoForCausalLM.from_pretrained("/export/data2/tdebets/models/gpt-neo2/50epochs").cuda()
+# model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-125M").cuda()
 # print('resize model')
 
 # Resize the token embeddings because we've just added 3 new tokens 
@@ -86,9 +88,9 @@ train_dataset, val_dataset = random_split(dataset,
                             [train_size, len(dataset) - train_size])
 
 training_args = TrainingArguments(output_dir="/export/data2/tdebets/models/gpt-small",
-                                  num_train_epochs=50,
-                                  logging_steps=5000,
-                                  save_steps=5000,                                   
+                                  num_train_epochs=5,
+                                  logging_steps=1000,
+                                  save_steps=1000,                                   
                                   per_device_train_batch_size=2,
                                   per_device_eval_batch_size=2,
                                   warmup_steps=100,
