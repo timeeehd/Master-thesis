@@ -105,7 +105,10 @@ def train(
 
             input_tensor = input_tensor.to(device)
             outputs = model(input_tensor, labels=input_tensor)
+            print(outputs)
             loss = outputs[0]
+            print(loss)
+            print(loss.size)
             loss.backward()
 
             if (accumulating_batch_count % batch_size) == 0:

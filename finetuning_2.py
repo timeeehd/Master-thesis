@@ -88,7 +88,7 @@ train_dataset, val_dataset = random_split(dataset,
                             [train_size, len(dataset) - train_size])
 
 training_args = TrainingArguments(output_dir="/export/data2/tdebets/models/gpt-small",
-                                  num_train_epochs=5,
+                                  num_train_epochs=1,
                                   logging_steps=1000,
                                   save_steps=1000,                                   
                                   per_device_train_batch_size=2,
@@ -117,8 +117,8 @@ generated = tokenizer.encode(
     return_tensors="pt").cuda()
 model = model.cuda()
 
-sample_outputs = model.generate(generated, do_sample=False, top_k=50, max_length=1024, top_p=0.95,
-                                temperature=0, num_return_sequences=0, repetition_penalty=1.1)
+sample_outputs = model.generate(generated, do_sample=True, top_k=50, max_length=1024, top_p=0.95,
+                                temperature=0.1, num_return_sequences=2, repetition_penalty=1.1)
 # sample_outputs = model.generate(generated, max_length=50)
 predicted_text2 = tokenizer.decode(sample_outputs[0], skip_special_tokens=True)
 print(predicted_text2)
