@@ -6,10 +6,9 @@ from tqdm import tqdm
 with open('data/Fairy_prompts_test_tokenized.txt', "r", encoding='utf-8-sig') as file:
     data = file.readlines()
 path = '/export/data2/tdebets/models/'
-maps = ['t5/']
-numbers = [0, 5, 22, 75, 100, 125, 150]
+maps = ['t5-test/']
+numbers = [5,22,50]
 lenghts = [200,350]
-
 for length in lenghts:
     print(length)
     for n in numbers:
@@ -41,7 +40,7 @@ for length in lenghts:
         else:
             for map in maps:
                 model = SimpleT5()
-                model.from_pretrained(model_type="t5", model_name="t5-small")
+                model.from_pretrained(model_type="t5", model_name="t5-base")
                 last_epoch_model = f'{path}{map}{str(n)}epochs' # put the name here
                 # model.load_model("t5", last_epoch_model, use_gpu=True)
                 model.load_model("t5", last_epoch_model, use_gpu=False)

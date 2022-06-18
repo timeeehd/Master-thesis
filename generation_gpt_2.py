@@ -17,27 +17,27 @@ transformers.logging.set_verbosity_error()
 
 path = '/export/data2/tdebets/models/'
 tokenizer_path = '/export/data2/tdebets/tokenizer/'
-maps = ['test_fairy/']
+# maps = ['gpt-small2/']
 # maps = ['gpt-neo/']
 
 # maps = ['test_fairy/']
 
 # numbers = [1,2,3,4]
-numbers = [5,22,50,75,100,125, 150]
-# numbers = [0]
+# numbers = [0,5,22,50,75,100,125, 150]
+numbers = [0]
 with open('data/test (5).wp_source', "r", encoding='utf-8-sig') as file:
     data = file.readlines()
 data = data[:300]
-lenghts = [200,350]
+lenghts = [350]
 for length in lenghts:
     print(length)
     for n in numbers:
         print(n)
         if n == 0:
             torch.manual_seed(42)
-            tokenizer = GPT2Tokenizer.from_pretrained("gpt2-medium")
+            tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
             # model = GPTNeoForCausalLM.from_pretrained('EleutherAI/gpt-neo-125M').cuda()
-            model = GPT2LMHeadModel.from_pretrained("gpt2-medium").cuda()
+            model = GPT2LMHeadModel.from_pretrained("gpt2").cuda()
             print(next(model.parameters()).is_cuda)
             output = []
             output_w_prompt = []
@@ -59,12 +59,12 @@ for length in lenghts:
                 output.append(sent[len(d):])
 
             # f = open("results/med_FairyDB_test_2.txt", "w", encoding="utf-8")
-            f = open(path + "results_wp/standard-med/" + str(length) + ".txt", "w", encoding="utf-8")
+            f = open(path + "results_wp/standard-small/" + str(length) + ".txt", "w", encoding="utf-8")
 
             for out in output:
                 f.write(out + '\n')
             f.close()
-            f = open(path + "results_wp/standard-med/prompt_" + str(length) + ".txt", "w", encoding="utf-8")
+            f = open(path + "results_wp/standard-small/prompt_" + str(length) + ".txt", "w", encoding="utf-8")
             # f = open("results/med_prompt_FairyDB_test_2.txt", "w", encoding="utf-8")
             for out in output_w_prompt:
                 f.write(out + '\n')

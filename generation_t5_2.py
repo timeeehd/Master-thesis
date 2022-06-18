@@ -7,8 +7,8 @@ with open('data/test (5).wp_source', "r", encoding='utf-8-sig') as file:
     data = file.readlines()
 data = data[:300]
 path = '/export/data2/tdebets/models/'
-maps = ['t5/']
-numbers = [0, 5, 22, 75, 100, 125, 150]
+maps = ['t5-med/']
+numbers = [0,5,22,50,75,100,125,150]
 lenghts = [200,350]
 
 for length in lenghts:
@@ -17,7 +17,7 @@ for length in lenghts:
         print(n)
         if n == 0:
             model = SimpleT5()
-            model.from_pretrained(model_type="t5", model_name="t5-small")
+            model.from_pretrained(model_type="t5", model_name="t5-base")
             model.load_model("t5", 't5-small', use_gpu=False)
             output = []
             output_w_prompt = []
@@ -29,12 +29,12 @@ for length in lenghts:
                 output_w_prompt.append(d + " "+ sent)
                 output.append(sent)
                         # f = open("results/med_FairyDB_test_2.txt", "w", encoding="utf-8")
-            f = open(path + "results_wp/standard-t5/" + str(length) + ".txt", "w", encoding="utf-8")
+            f = open(path + "results_wp/standard-t5-med/" + str(length) + ".txt", "w", encoding="utf-8")
 
             for out in output:
                 f.write(out + '\n')
             f.close()
-            f = open(path + "results_wp/standard-t5/prompt_" + str(length) + ".txt", "w", encoding="utf-8")
+            f = open(path + "results_wp/standard-t5-med/prompt_" + str(length) + ".txt", "w", encoding="utf-8")
             # f = open("results/med_prompt_FairyDB_test_2.txt", "w", encoding="utf-8")
             for out in output_w_prompt:
                 f.write(out + '\n')
@@ -42,7 +42,7 @@ for length in lenghts:
         else:
             for map in maps:
                 model = SimpleT5()
-                model.from_pretrained(model_type="t5", model_name="t5-small")
+                model.from_pretrained(model_type="t5", model_name="t5-base")
                 last_epoch_model = f'{path}{map}{str(n)}epochs' # put the name here
                 # model.load_model("t5", last_epoch_model, use_gpu=True)
                 model.load_model("t5", last_epoch_model, use_gpu=False)

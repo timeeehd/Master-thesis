@@ -299,6 +299,7 @@ class SimpleT5_own:
         if model_type == "t5":
             if new_token:
                 self.tokenizer = T5Tokenizer.from_pretrained(f"{model_name}")
+                print('new tokens')
                 special_tokens_dict = {
                     "bos_token": "<BOS>",
                     "eos_token": "<EOS>",
