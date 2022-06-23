@@ -1,4 +1,5 @@
 from transformers import GPT2LMHeadModel
+import re
 
 class GPT2FinetunedWithNgrams(GPT2LMHeadModel):
     def __init__(self, config):
@@ -65,7 +66,7 @@ class Stories(Dataset):
 
         for row in df:
             self.stories.append(torch.tensor(
-                self.tokenizer.encode(row[:max_length])[:300]
+                self.tokenizer.encode(row[:max_length])
             ))
         if truncate:
             self.stories = self.stories[:20000]
@@ -94,17 +95,17 @@ model = GPT2LMHeadModel.from_pretrained('gpt2')
 # model.load_state_dict(torch.load('models/GPT2-small.pt'))
 
 
-special_tokens_dict = {
-        "bos_token": "<BOS>",
-        "eos_token": "<EOS>",
-        "pad_token": "<PAD>",
-        "additional_special_tokens": [
-            "<endprompt>",
-        ],
-    }
-
-num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
-model.resize_token_embeddings(len(tokenizer))
+# special_tokens_dict = {
+#         "bos_token": "<BOS>",
+#         "eos_token": "<EOS>",
+#         "pad_token": "<PAD>",
+#         "additional_special_tokens": [
+#             "<endprompt>",
+#         ],
+#     }
+#
+# num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+# model.resize_token_embeddings(len(tokenizer))
 
 def pack_tensor(new_tensor, packed_tensor, max_seq_len):
     if packed_tensor is None:
@@ -115,9 +116,20 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         packed_tensor = torch.cat([new_tensor, packed_tensor[:, 1:]], dim=1)
         return packed_tensor, True, None
 
+def _preprocess_generated_text(sample, tokenizer, has_space):
+    decoded = tokenizer.decode(
+        sample, skip_special_tokens=True)
+    # Removing spaces.
+    decoded = decoded.strip()
+    # Adding a space at the beginning if needed.
+    if not has_space:
+        decoded = ' ' + decoded
+    # Filtering � globally
+    return re.sub(u'\uFFFD', '', decoded)
 
 def train(
-        dataset, model, tokenizer,
+        # dataset,
+        model, tokenizer,
         batch_size=1, epochs=5, lr=2e-5,
         max_seq_len=2048, warmup_steps=50,
         gpt2_type="gpt2", output_dir=".", output_prefix="wreckgar",
@@ -152,30 +164,56 @@ def train(
             t = random.random()
             # outputs = model(input_tensor, labels=input_tensor, test=t)
             outputs = model(input_tensor, labels=input_tensor)
+            sentence = ['I want to be a millionaire ']
+            first_idx = False
+            encodings_dict = tokenizer(sentence)
+            sliced_inputs = [encodings_dict['input_ids'][0][-550:]]
 
+            prompts_ids = torch.tensor(
+                sliced_inputs, device=device, dtype=torch.long)
+            first_idx = len(prompts_ids[0]) if first_idx else 0
+            sample_outputs = model.generate(
+                prompts_ids,  # Long tensor of size (batch_size, max_prompt_length)
+                do_sample=True,  # activate top-k, top-p sampling
+                max_length=25 + first_idx,
+                min_length=first_idx + 25 // 2 if first_idx else 10,
+                top_k=70,
+                top_p=0.95,
+                temperature=1.05,
+                repetition_penalty=1.0,  # no penalty
+                num_return_sequences=10,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+            has_space = sentence[0][-1].isspace()
+            generated = map(lambda sample: _preprocess_generated_text(
+                sample[first_idx:], tokenizer, has_space), sample_outputs)
+            generated = np.array(
+                list(filter(lambda sample: len(sample.strip()) > 2, generated)))
+            print(generated)
             # print(outputs)
             loss = outputs[0]
             # print(loss)
             # print(loss.size)
             loss.backward()
+            optimizer.zero_grad()
+            model.zero_grad()
+            # if (accumulating_batch_count % batch_size) == 0:
+            #     optimizer.step()
+            #     scheduler.step()
+            #     optimizer.zero_grad()
+            #     model.zero_grad()
+            #
+            # accumulating_batch_count += 1
+            # input_tensor = None
+            if save_model_on_epoch:
+                torch.save(
+                    model.state_dict(),
+                    #                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
+                    os.path.join('/export/data2/tdebets/models', f"{output_prefix}.pt"),
+                )
+                tokenizer.save_pretrained('models/tokenizer/gpt2/')
 
-            if (accumulating_batch_count % batch_size) == 0:
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
-                model.zero_grad()
-
-            accumulating_batch_count += 1
-            input_tensor = None
-        if save_model_on_epoch:
-            torch.save(
-                model.state_dict(),
-                #                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
-                os.path.join('/export/data2/tdebets/models', f"{output_prefix}.pt"),
-            )
-            tokenizer.save_pretrained('models/tokenizer/gpt2/')
-
-    return model
-sys.stdout.write('start training')
-model = train(dataset, model, tokenizer, save_model_on_epoch = False, output_prefix= 'GPT2-small-2048-1024')
-sys.stdout.write('finished training')
+        return model
+# sys.stdout.write('start training')
+# model = train(model, tokenizer, save_model_on_epoch = False, output_prefix= 'GPT2-small-2048-1024')
+# sys.stdout.write('finished training')
